@@ -51,9 +51,9 @@ export const usePanelDataLoader = (
   searchType: any,
 ) => {
   const log = (...args: any[]) => {
-    if (true) {
-      console.log(panelSchema?.value?.title + ": ", ...args);
-    }
+    // if (true) {
+    //   console.log(panelSchema?.value?.title + ": ", ...args);
+    // }
   };
 
   const state = reactive({
@@ -64,6 +64,7 @@ export const usePanelDataLoader = (
       queries: [] as any,
     },
     resultMetaData: [] as any,
+    searchRequestTraceIds: [] as any,
   });
 
   // observer for checking if panel is visible on the screen
@@ -73,7 +74,7 @@ export const usePanelDataLoader = (
   const isVisible: any = ref(false);
 
   // currently dependent variables data
-  let currentDependentVariablesData = variablesData.value?.values
+  let currentDependentVariablesData = variablesData?.value?.values
     ? JSON.parse(
         JSON.stringify(
           variablesData.value?.values
@@ -101,7 +102,7 @@ export const usePanelDataLoader = (
   //   JSON.parse(JSON.stringify(variablesData.value.values))
   // );
 
-  let currentDynamicVariablesData = variablesData.value?.values
+  let currentDynamicVariablesData = variablesData?.value?.values
     ? JSON.parse(
         JSON.stringify(
           variablesData.value?.values
@@ -287,7 +288,6 @@ export const usePanelDataLoader = (
               queryType: panelSchema.value.queryType,
               variables: [...(metadata1 || []), ...(metadata2 || [])],
             };
-            const signal = abortController.signal;
 
             return queryService
               .metrics_query_range({
@@ -302,12 +302,6 @@ export const usePanelDataLoader = (
               })
               .catch((error) => {
                 processApiError(error, "promql");
-                return { result: null, metadata: metadata };
-              })
-              .finally(() => {
-                if (signal.aborted) {
-                  return { result: null, metadata: metadata };
-                }
                 return { result: null, metadata: metadata };
               });
           },
@@ -348,8 +342,11 @@ export const usePanelDataLoader = (
             queryType: panelSchema.value.queryType,
             variables: [...(metadata1 || []), ...(metadata2 || [])],
           };
-            const signal = abortController.signal;
+            const { traceparent, traceId } = generateTraceContext();
 
+            addTraceId(traceId);
+            console.log("Adding traceId", traceId);
+            
           try {
             // trace context
             const { traceparent } = generateTraceContext();
@@ -430,7 +427,8 @@ export const usePanelDataLoader = (
                       },
                     },
                     page_type: pageType,
-                  },
+                    traceparent,
+                },
                   searchType.value ?? "Dashboards",
                 );
 
@@ -504,7 +502,7 @@ export const usePanelDataLoader = (
 
   watch(
     // Watching for changes in panelSchema, selectedTimeObj and forceLoad
-    () => [panelSchema?.value, selectedTimeObj?.value, forceLoad.value],
+    () => [panelSchema?.value, selectedTimeObj?.value, forceLoad?.value],
     async () => {
       log("PanelSchema/Time Wather: called");
       loadData(); // Loading the data
@@ -752,6 +750,67 @@ export const usePanelDataLoader = (
     }
   };
 
+  const addTraceId = (traceId: string) => {
+    if (state.searchRequestTraceIds.includes(traceId)) {
+      console.log("traceId already exists", traceId);
+      return;
+    }
+    console.log("addTraceId", traceId);
+    // console.log("addTraceId", state.searchRequestTraceIds.push(traceId));
+
+    state.searchRequestTraceIds.push(traceId);
+    console.log("state.searchRequestTraceIds", state.searchRequestTraceIds);
+  };
+
+  const removeTraceId = (traceId: string) => {
+    console.log("removeTraceId----", traceId);
+
+    state.searchRequestTraceIds = state.searchRequestTraceIds.filter(
+      (id: string) => id !== traceId
+    );
+    console.log("removeTraceId", state.searchRequestTraceIds);
+  };
+
+  const cancelQuery = () => {
+    console.log("cancelQuery----", state.searchRequestTraceIds);
+    queryService
+      .delete_running_queries(
+        store.state.selectedOrganization.identifier,
+        state.searchRequestTraceIds
+      )
+
+      .then((res) => {
+        console.log("cancelQuery inside try", res);
+
+        const isCancelled = res.data.some((item: any) => item.is_success);
+        console.log("isCancelled", isCancelled);
+
+        // $q.notify({
+        //   message: isCancelled
+        //     ? "Running query cancelled successfully"
+        //     : "Query execution was completed before cancellation.",
+        //   color: "positive",
+        //   position: "bottom",
+        //   timeout: 1500,
+        // });
+      })
+      .catch((error: any) => {
+        console.log("cancelQuery error", error);
+
+        // $q.notify({
+        //   message:
+        //     error.response?.data?.message || "Failed to delete running query",
+        //   color: "negative",
+        //   position: "bottom",
+        //   timeout: 1500,
+        // });
+      })
+      .finally(() => {
+        // if (searchObj.loading) searchObj.loading = false;
+        // if (searchObj.loadingHistogram) searchObj.loadingHistogram = false;
+        console.log("cancelQuery finally");
+      });
+  };
   const hasAtLeastOneQuery = () =>
     panelSchema.value.queries?.some((q: any) => q?.query);
 
@@ -762,7 +821,7 @@ export const usePanelDataLoader = (
   // 2. compare the dependent variables data with the old dependent variables Data
   // 3. if the value of any current variable is changed, call the api
   watch(
-    () => variablesData.value?.values,
+    () => variablesData?.value?.values,
     () => {
       // console.log("inside watch variablesData");
       // ensure the query is there
@@ -1148,5 +1207,6 @@ export const usePanelDataLoader = (
   return {
     ...toRefs(state),
     loadData,
+    cancelQuery,
   };
 };
