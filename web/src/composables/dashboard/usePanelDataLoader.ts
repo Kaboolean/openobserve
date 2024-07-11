@@ -342,12 +342,12 @@ export const usePanelDataLoader = (
             queryType: panelSchema.value.queryType,
             variables: [...(metadata1 || []), ...(metadata2 || [])],
           };
-            const { traceparent, traceId } = generateTraceContext();
-            console.log("traceparent", traceparent);
+          const { traceparent, traceId } = generateTraceContext();
+          console.log("traceparent", traceparent);
 
-            addTraceId(traceId);
-            console.log("Adding traceId", traceId);
-            
+          addTraceId(traceId);
+          console.log("Adding traceId", traceId);
+
           try {
             // trace context
             const { traceparent } = generateTraceContext();
@@ -429,7 +429,7 @@ export const usePanelDataLoader = (
                     },
                     page_type: pageType,
                     traceparent,
-                },
+                  },
                   searchType.value ?? "Dashboards",
                 );
 
@@ -476,7 +476,7 @@ export const usePanelDataLoader = (
           } finally {
             // set loading to false
             state.loading = false;
-
+            removeTraceId(traceId);
             // abort on done
             if (abortController) {
               abortController.abort();
@@ -770,18 +770,18 @@ export const usePanelDataLoader = (
     // state.searchRequestTraceIds.push(traceId);
     console.log(
       "Updated searchRequestTraceIds after add",
-      state.searchRequestTraceIds
+      state.searchRequestTraceIds,
     );
   };
 
   const removeTraceId = (traceId: string) => {
     console.log("removeTraceId called with traceId:", traceId);
     state.searchRequestTraceIds = state.searchRequestTraceIds.filter(
-      (id: any) => id !== traceId
+      (id: any) => id !== traceId,
     );
     console.log(
       "Updated searchRequestTraceIds after remove",
-      state.searchRequestTraceIds
+      state.searchRequestTraceIds,
     );
   };
 
