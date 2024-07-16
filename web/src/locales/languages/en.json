@@ -794,7 +794,8 @@
     "preview": "Preview",
     "crontitle": "Enable Cron",
     "lastTriggered":"Last Triggered At",
-    "owner": "Owner"
+    "owner": "Owner",
+    "title": "Title"
   },
   "alert_templates": {
     "header": "Templates",
