@@ -551,6 +551,10 @@ export const usePanelDataLoader = (
     },
   );
 
+  const escapeSingleQuotes = (value: any) => {
+    return value?.replace(/'/g, "''");
+  };
+
   /**
    * Replaces the query with the corresponding variable values.
    *
@@ -636,7 +640,7 @@ export const usePanelDataLoader = (
         let variableValue = "";
         if (Array.isArray(variable.value)) {
           const value = variable.value
-            .map((value: any) => `'${value}'`)
+            .map((value: any) => `'${escapeSingleQuotes(value)}'`)
             .join(",");
           const possibleVariablesPlaceHolderTypes = [
             {
@@ -679,7 +683,9 @@ export const usePanelDataLoader = (
             );
           });
         } else {
-          variableValue = variable.value === null ? "" : variable.value;
+          variableValue = escapeSingleQuotes(
+            variable.value === null ? "" : variable.value,
+          );
           if (query.includes(variableName)) {
             metadata.push({
               type: "variable",
