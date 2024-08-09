@@ -35,7 +35,7 @@ import {
   formateRateInterval,
   getTimeInSecondsBasedOnUnit,
 } from "@/utils/dashboard/variables/variablesUtils";
-import { b64EncodeUnicode, generateTraceContext } from "@/utils/zincutils";
+import { b64EncodeUnicode, generateTraceContext, escapeSingleQuotes } from "@/utils/zincutils";
 
 /**
  * debounce time in milliseconds for panel data loader
@@ -550,10 +550,6 @@ export const usePanelDataLoader = (
       loadData(); // Loading the data
     },
   );
-
-  const escapeSingleQuotes = (value: any) => {
-    return value?.replace(/'/g, "''");
-  };
 
   /**
    * Replaces the query with the corresponding variable values.
