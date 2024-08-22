@@ -82,16 +82,30 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
           @click.stop="savePanelData.execute()"
           :loading="savePanelData.isLoading.value"
         />
-        <q-btn
+        <template
           v-if="!['html', 'markdown'].includes(dashboardPanelData.data.type)"
-          class="q-ml-md text-bold no-border"
-          data-test="dashboard-apply"
-          padding="sm lg"
-          color="secondary"
-          no-caps
-          :label="t('panel.apply')"
-          @click="runQuery"
-        />
+        >
+          <q-btn
+            v-if="config.isEnterprise == 'true' && searchRequestTraceIds.length"
+            class="q-ml-md text-bold no-border"
+            data-test="dashboard-apply"
+            padding="sm lg"
+            color="negative"
+            no-caps
+            :label="t('panel.cancel')"
+            @click="cancelQuery"
+          />
+          <q-btn
+            v-else
+            class="q-ml-md text-bold no-border"
+            data-test="dashboard-apply"
+            padding="sm lg"
+            color="secondary"
+            no-caps
+            :label="t('panel.apply')"
+            @click="runQuery"
+          />
+        </template>
       </div>
     </div>
     <q-separator></q-separator>
@@ -205,7 +219,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                           Your chart is not up to date
                         </div>
                         <div>
-                          Chart Configuration / Variables  has been updated, but
+                          Chart Configuration / Variables has been updated, but
                           the chart was not updated automatically. Click on the
                           "Apply" button to run the query again
                         </div>
@@ -337,6 +351,9 @@ import { useLoading } from "@/composables/useLoading";
 import { isEqual } from "lodash-es";
 import { provide } from "vue";
 import useNotifications from "@/composables/useNotifications";
+import queryService from "@/services/search";
+import { useQuasar } from "quasar";
+import config from "@/aws-exports";
 
 const ConfigPanel = defineAsyncComponent(() => {
   return import("../../../components/dashboards/addPanel/ConfigPanel.vue");
@@ -400,6 +417,7 @@ export default defineComponent({
       errors: [],
     });
     let variablesData: any = reactive({});
+    const $q = useQuasar();
 
     // used to provide values to chart only when apply is clicked (same as chart data)
     let updatedVariablesData: any = reactive({});
@@ -423,11 +441,11 @@ export default defineComponent({
       // when this is called 1st time, we need to set the data for the updated variables data as well
       // from the second time, it will only be updated after the apply button is clicked
       if (
-        !updatedVariablesData?.values?.length    // Previous value of variables is empty
-        && variablesData?.values?.length > 0       // new values of variables is NOT empty
+        !updatedVariablesData?.values?.length && // Previous value of variables is empty
+        variablesData?.values?.length > 0 // new values of variables is NOT empty
       ) {
-          // assing the variables so that it can allow the panel to wait for them to load which is manual after hitting "Apply"
-          Object.assign(updatedVariablesData, variablesData);
+        // assing the variables so that it can allow the panel to wait for them to load which is manual after hitting "Apply"
+        Object.assign(updatedVariablesData, variablesData);
       }
     };
 
@@ -580,7 +598,7 @@ export default defineComponent({
       //compare chartdata and dashboardpaneldata and variables data as well
       return (
         !isEqual(chartData.value, dashboardPanelData.data) ||
-        !isEqual(variablesData, updatedVariablesData) 
+        !isEqual(variablesData, updatedVariablesData)
       );
     });
 
@@ -638,7 +656,10 @@ export default defineComponent({
       }
 
       // Also update variables data
-      Object.assign(updatedVariablesData, JSON.parse(JSON.stringify(variablesData)));
+      Object.assign(
+        updatedVariablesData,
+        JSON.parse(JSON.stringify(variablesData)),
+      );
 
       // copy the data object excluding the reactivity
       chartData.value = JSON.parse(JSON.stringify(dashboardPanelData.data));
@@ -1041,6 +1062,66 @@ export default defineComponent({
     // it is currently used in panelschemarendered, chartrenderer, convertpromqldata(via panelschemarenderer), and convertsqldata
     provide("hoveredSeriesState", hoveredSeriesState);
 
+    //reactive object for loading state of variablesData and panels
+    const variablesAndPanelsDataLoadingState = reactive({
+      variablesData: {},
+      panels: {},
+      searchRequestTraceIds: {},
+    });
+
+    // provide variablesAndPanelsDataLoadingState to share data between components
+    provide(
+      "variablesAndPanelsDataLoadingState",
+      variablesAndPanelsDataLoadingState,
+    );
+
+    const searchRequestTraceIds = computed(() => {
+      const searchIds = Object.values(
+        variablesAndPanelsDataLoadingState.searchRequestTraceIds,
+      ).filter((item: any) => item.length > 0);
+
+      return searchIds.flat() as string[];
+    });
+
+    // [START] cancel running queries
+
+    const cancelQuery = () => {
+      if (searchRequestTraceIds.value.length === 0) {
+        console.error("No trace IDs to cancel");
+        return;
+      }
+      queryService
+        .delete_running_queries(
+          store.state.selectedOrganization.identifier,
+          searchRequestTraceIds.value,
+        )
+        .then((res) => {
+          const isCancelled = res.data.some((item: any) => item.is_success);
+
+          $q.notify({
+            message: isCancelled
+              ? "Running query cancelled successfully"
+              : "Query execution was completed before cancellation.",
+            color: "positive",
+            position: "bottom",
+            timeout: 1500,
+          });
+        })
+        .catch((error) => {
+          console.error("cancelQuery error:", error);
+          $q.notify({
+            message:
+              error.response?.data?.message || "Failed to cancel running query",
+            color: "negative",
+            position: "bottom",
+            timeout: 1500,
+          });
+        })
+        .finally(() => {
+          console.log("cancelQuery finally");
+        });
+    };
+
     return {
       t,
       updateDateTime,
@@ -1074,6 +1155,9 @@ export default defineComponent({
       onDataZoom,
       showTutorial,
       updateVrlFunctionFieldList,
+      searchRequestTraceIds,
+      cancelQuery,
+      config,
     };
   },
   methods: {
