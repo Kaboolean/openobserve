@@ -52,7 +52,7 @@ export interface Template {
   name: string;
   body: any;
   isDefault?: boolean;
-  type: "web_hook" | "email";
+  type: "http" | "email";
   title?: string;
 }
 
@@ -73,7 +73,7 @@ export interface Destination {
   headers: Headers;
   template: string | Template;
   emails: string;
-  type: "web_hook" | "email";
+  type: "http" | "email";
 }
 
 export interface DestinationPayload {
@@ -84,7 +84,7 @@ export interface DestinationPayload {
   headers: Headers;
   template: string | Template;
   emails: string[];
-  type: "web_hook" | "email";
+  type: "http" | "email";
 }
 
 // Destination object which is modified in frontend to display in table and form
