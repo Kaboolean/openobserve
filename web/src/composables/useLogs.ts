@@ -2351,9 +2351,10 @@ const useLogs = () => {
 
   const getHistogramQueryData = (queryReq: any) => {
     return new Promise((resolve, reject) => {
-      if (searchObj.data.isOperationCancelled && searchObj.data.histogram?.xData?.length == 0) {
-
-
+      if (
+        searchObj.data.isOperationCancelled &&
+        searchObj.data.histogram?.xData?.length == 0
+      ) {
         searchObj.loadingHistogram = false;
         searchObj.data.isOperationCancelled = false;
 
@@ -3053,36 +3054,35 @@ const useLogs = () => {
             size: 225,
           });
         }
-        
-        let sizes : any;
+
+        let sizes: any;
         if (
           searchObj.data.resultGrid.colSizes &&
           searchObj.data.resultGrid.colSizes.hasOwnProperty(
             searchObj.data.stream.selectedStream,
           )
-        ){
-          sizes  = searchObj.data.resultGrid.colSizes[
-            searchObj.data.stream.selectedStream
-          ];
+        ) {
+          sizes =
+            searchObj.data.resultGrid.colSizes[
+              searchObj.data.stream.selectedStream
+            ];
         }
-
-        
 
         for (const field of searchObj.data.stream.selectedFields) {
           if (field != store.state.zoConfig.timestamp_column) {
-            let foundKey  , foundValue;
+            let foundKey, foundValue;
 
-          if(sizes.length > 0){
-            Object.keys(sizes[0]).forEach((key) => {
-              const trimmedKey = key
-                .replace(/^--(header|col)-/, "")
-                .replace(/-size$/, "");
-              if (trimmedKey === field) {
-                foundKey = key;
-                foundValue = sizes[0][key];
-              }
-            });
-          }
+            if (sizes.length > 0) {
+              Object.keys(sizes[0]).forEach((key) => {
+                const trimmedKey = key
+                  .replace(/^--(header|col)-/, "")
+                  .replace(/-size$/, "");
+                if (trimmedKey === field) {
+                  foundKey = key;
+                  foundValue = sizes[0][key];
+                }
+              });
+            }
 
             searchObj.data.resultGrid.columns.push({
               name: field,
@@ -3098,8 +3098,8 @@ const useLogs = () => {
                 showWrap: true,
                 wrapContent: false,
               },
-
-              size: foundValue || 150,
+              size: foundValue || 250,
+              maxSize: window.innerWidth,
             });
           }
         }

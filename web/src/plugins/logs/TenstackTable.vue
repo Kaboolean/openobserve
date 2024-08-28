@@ -142,10 +142,9 @@
             :colspan="columnOrder.length"
             class="text-bold"
             :style="{
-                          background: store.state.theme === 'dark' ? '#565656' : '#F5F5F5',
-                          opacity: 0.7
-            } "
-
+              background: store.state.theme === 'dark' ? '#565656' : '#F5F5F5',
+              opacity: 0.7,
+            }"
           >
             <div
               class="text-subtitle2 text-weight-bold tw-flex tw-items-center"
